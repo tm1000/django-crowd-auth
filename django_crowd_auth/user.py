@@ -1,8 +1,8 @@
 import logging
 
 from django.conf import settings
-from django.contrib.auth.models import Group
-from django.contrib.auth import get_user_model
+from weblate.auth.models import Group
+from weblate.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 
 
@@ -33,17 +33,16 @@ def from_data(client, data):
     is_staff = getattr(settings, 'CROWD_USERS_ARE_STAFF', is_superuser)
 
     try:
-        user = get_user_model().objects.get(username=username)
+        user = User.objects.get(username=username)
 
     except ObjectDoesNotExist:
-        user = get_user_model().objects.create(
+        user = User(
             username=username,
-            first_name=data.get('first-name'),
-            last_name=data.get('last-name'),
+            full_name=data.get('first-name')+' '+data.get('last-name'),
             email=data.get('email'),
             is_active=is_active,
-            is_staff=is_staff,
             is_superuser=is_superuser)
+        user.save()
         LOGGER.info('User %s created', username)
 
     else:
@@ -53,12 +52,6 @@ def from_data(client, data):
             LOGGER.info('User %s is_superuser attribute changed from %s to %s',
                         username, user.is_superuser, is_superuser)
             user.is_superuser = is_superuser
-            user_changed = True
-
-        if is_staff != user.is_staff:
-            LOGGER.info('User %s is_staff attribute changed from %s to %s',
-                        username, user.is_staff, is_staff)
-            user.is_staff = is_staff
             user_changed = True
 
         if is_active != user.is_active:
